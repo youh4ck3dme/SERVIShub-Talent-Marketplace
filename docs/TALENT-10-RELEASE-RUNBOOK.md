@@ -1,7 +1,7 @@
 # TALENT-10 — Release gates & deployment runbook
 
 ## Current status: NO-GO until verified
-All PRs #11–#20 are stacked drafts. Earlier Actions runs reported failure *before steps* and job logs could not be fetched; investigate GitHub repo Actions/account settings/runner allocation. Never describe them as green.
+The complete Talent Marketplace migration is proposed in [PR #1](https://github.com/youh4ck3dme/SERVIShub-Talent-Marketplace/pull/1) against a clean `main`. On 18 October 2026, CI (Postgres migrations, RLS, unit, lint, typecheck, build), production dependency audit and CodeQL passed in this new owner repository. Production remains NO-GO until hosted Supabase JWT/tenant E2E, backup/recovery and UAT are verified.
 
 ### CI checks
 - Frozen pnpm install; Prisma generate/validate and migrate deploy in disposable PostgreSQL 16.

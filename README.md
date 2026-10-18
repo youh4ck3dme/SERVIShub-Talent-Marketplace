@@ -39,7 +39,7 @@ Do not run `prisma migrate dev` against production. Apply new migrations on disp
 ## Release quality
 `pnpm test:unit`, `pnpm lint`, `pnpm typecheck`, `pnpm build`.
 GitHub Actions checks additionally run ephemeral Postgres migrations/RLS tests, audit and CodeQL.
-**No success claim until these run green**, hosted Supabase/JWT E2E and manual UAT pass.
-See issues #1–#10 and stacked draft PRs #11–#20.
+CI, production dependency audit and CodeQL passed on the migration branch on 18 October 2026. Hosted Supabase/JWT E2E and manual UAT are still required before production.
+Track migration in [PR #1](https://github.com/youh4ck3dme/SERVIShub-Talent-Marketplace/pull/1). The original backlog and stacked drafts remain in `you640/SERVIShub`.
 
 Design inspired by good marketplace UX, not copied proprietary Pretlak source code, logos or assets.
