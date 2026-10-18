@@ -31,7 +31,9 @@ jobs:
           pnpm remove shadcn
           pnpm up next@16.3.8 eslint-config-next@16.3.8
           pnpm audit --fix=update || echo "Some advisories require manual review"
+          pnpm audit --fix || echo "Some advisories still require manual review"
           pnpm install --no-frozen-lockfile
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/servishub_ci pnpm db:generate
           pnpm typecheck
       - name: Commit dependency changes to feature branch only
         run: |
