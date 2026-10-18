@@ -1,52 +1,40 @@
-import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+'use client';
 
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+
+function safeNext(value: string | null): string {
+  return value && value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '/';
+}
 export default function LoginPage() {
-  return (
-    <div className="flex min-h-full flex-col">
-      <SiteHeader />
-      <main className="mx-auto flex w-full max-w-md flex-1 items-center px-4 py-12">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>Prihlásenie</CardTitle>
-            <CardDescription>
-              Email, SMS alebo OAuth — napojenie na Supabase Auth príde v MVP.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="vas@email.sk" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Heslo</Label>
-              <Input id="password" type="password" placeholder="••••••••" />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-3">
-            <Button className="w-full" disabled>
-              Prihlásiť sa (placeholder)
-            </Button>
-            <p className="text-sm text-muted-foreground">
-              Nemáte účet?{" "}
-              <Link href="/signup" className="text-primary underline-offset-4 hover:underline">
-                Registrácia
-              </Link>
-            </p>
-          </CardFooter>
-        </Card>
-      </main>
-    </div>
-  );
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true); setError('');
+    try {
+      const { error: authError } = await createClient().auth.signInWithPassword({ email, password });
+      if (authError) throw new Error('Prihlásenie zlyhalo. Skontrolujte e-mail a heslo.');
+      const response = await fetch('/api/auth/sync-profile', { method: 'POST', credentials: 'same-origin' });
+      if (!response.ok) throw new Error('Účet sa nepodarilo pripraviť. Skúste to znova.');
+      router.replace(safeNext(new URLSearchParams(window.location.search).get('next')));
+      router.refresh();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Nastala chyba.'); }
+    finally { setBusy(false); }
+  }
+  return <main className="mx-auto w-full max-w-md flex-1 px-5 py-16">
+    <h1 className="text-3xl font-semibold tracking-tight">Prihlásenie</h1>
+    <p className="mt-2 text-sm text-muted-foreground">Prihláste sa do svojho účtu.</p>
+    <form onSubmit={submit} className="mt-8 space-y-4">
+      <label className="block text-sm font-medium">E-mail<input className="mt-1 w-full rounded-md border bg-background p-3" autoComplete="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} /></label>
+      <label className="block text-sm font-medium">Heslo<input className="mt-1 w-full rounded-md border bg-background p-3" autoComplete="current-password" type="password" required value={password} onChange={e => setPassword(e.target.value)} /></label>
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      <button disabled={busy} className="w-full rounded-md bg-primary p-3 font-medium text-primary-foreground disabled:opacity-50" type="submit">{busy ? 'Prihlasovanie…' : 'Prihlásiť sa'}</button>
+    </form>
+    <p className="mt-6 text-sm text-muted-foreground">Nemáte účet? <Link href="/signup" className="font-semibold underline">Registrácia</Link></p>
+  </main>;
 }

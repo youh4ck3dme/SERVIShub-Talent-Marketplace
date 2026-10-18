@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: "%s · ServisHub SK",
   },
   description:
-    "Marketplace lokálnych služieb — rezervácie, platby a CRM pre remeselníkov na Slovensku.",
+    "Technologické pracovné ponuky, freelance projekty a talent marketplace pre Slovensko a Česko.",
 };
 
 export default function RootLayout({

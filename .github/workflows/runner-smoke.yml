@@ -1,0 +1,17 @@
+name: Runner availability smoke
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  runner-smoke:
+    name: Ubuntu runner smoke
+    runs-on: ubuntu-22.04
+    timeout-minutes: 3
+    steps:
+      - name: Show runner identity
+        run: |
+          echo "GitHub hosted runner started"
+          uname -a
+          node --version

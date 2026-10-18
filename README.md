@@ -1,61 +1,45 @@
-# ServisHub SK
+# SERVIShub → Talent & Freelance Marketplace
 
-Marketplace a SaaS pre lokálne služby na Slovensku — rezervácie, platby, CRM pre remeselníkov a lead-generation.
+Next-generation SK/CZ tech job board + freelance marketplace, built incrementally from SERVIShub. **Work in progress, not production-ready.**
 
-> Stav: **scaffold** (Next.js + Supabase Auth wiring + Prisma schéma + route placeholders). Biznis fičúry ešte nie sú implementované.
+## Architecture
+- Next.js 16 / React 19 / TypeScript / Tailwind 4 frontend + Server Actions
+- Supabase Auth for identities and sessions; PostgreSQL + Prisma 7 for transactional domain
+- Provider/Service/Booking legacy paths remain, new Candidate/Company/Job/Application/JobAlert domain is additive
+- WordPress WPGraphQL is read-only **editorial CMS** for /blog (separate deployment, optional)
+- Resend scheduled job alert cron once configured; no secrets in browser
 
-## Quick start
-
+## Local setup
 ```bash
-cd ~/HUB/01-Projekty/ServisHUB-SK
-pnpm install
+pnpm install --frozen-lockfile
 cp .env.example .env.local
-# vyplň Supabase + DATABASE_URL
+# configure real staging Supabase/DB credentials
+pnpm exec prisma validate
+pnpm exec prisma generate
 pnpm dev
 ```
 
-Otvor [http://localhost:3000](http://localhost:3000).
+Do not run `prisma migrate dev` against production. Apply new migrations on disposable/staging DB first and review RLS/privilege SQL separately. Start at `docs/TALENT-10-RELEASE-RUNBOOK.md`.
 
-## Stack
+## Core routes
+| URL | Purpose |
+| --- | --- |
+| / | Landing page |
+| /praca | Public job catalog, salary and remote filters |
+| /praca/[slug] | Public job detail + JobPosting SEO |
+| /login, /signup, /auth/callback | Supabase Auth |
+| /firma/onboarding, /firma/dashboard | Employer onboarding and workspace |
+| /firma/ponuky/nova | Create and publish jobs |
+| /admin/firmy | Admin verification of companies |
+| /kandidat/profil, /kandidat/ziadosti | Candidate profile / applications |
+| /kandidat/strazeny-pes | Saved search email alerts |
+| /blog, /blog/[slug] | Optional WordPress editorial content |
+| /hladat, /pro | Original service marketplace routes preserved |
 
-| Vrstva | Technológia |
-|--------|-------------|
-| App | Next.js 16 App Router, React 19, TypeScript |
-| UI | Tailwind 4, shadcn/ui, Inter |
-| Auth/DB | Supabase (Auth + Postgres + RLS) |
-| ORM | Prisma 7 + `@prisma/adapter-pg` |
-| Package manager | pnpm |
+## Release quality
+`pnpm test:unit`, `pnpm lint`, `pnpm typecheck`, `pnpm build`.
+GitHub Actions checks additionally run ephemeral Postgres migrations/RLS tests, audit and CodeQL.
+**No success claim until these run green**, hosted Supabase/JWT E2E and manual UAT pass.
+See issues #1–#10 and stacked draft PRs #11–#20.
 
-## Routes
-
-| Path | Účel |
-|------|------|
-| `/` | Landing + waitlist placeholder |
-| `/login`, `/signup` | Auth placeholders |
-| `/hladat` | Vyhľadávanie (placeholder) |
-| `/pro` | Dashboard profesionála (auth guard) |
-| `/admin` | Admin panel (auth guard) |
-
-## Database
-
-```bash
-pnpm exec prisma generate
-pnpm exec prisma migrate dev --name init
-# potom aplikuj RLS:
-# supabase db push   # alebo spusť supabase/migrations/*.sql
-```
-
-Modely: `Profile`, `Provider`, `Category`, `Service`, `ServiceArea`, `Availability`, `Booking`, `Review`, `Subscription`, `Lead`.
-
-## Docs pre agentov
-
-Pozri [CLAUDE.md](./CLAUDE.md) — stack, commands, infra checklist (Supabase/Stripe), reuse cesty z `mistral-booking-whitelabel`.
-
-Produktový backlog (sprinty T0–T4, monetizácia, komponenty): [docs/BACKLOG.md](./docs/BACKLOG.md).
-
-## Design tokens
-
-- Primary: `#00796B`
-- Secondary: `#FF7043`
-- Background: `#F7F9FA`
-- Text: `#1F2933`
+Design inspired by good marketplace UX, not copied proprietary Pretlak source code, logos or assets.

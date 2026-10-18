@@ -4,7 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -12,48 +14,66 @@ concurrency:
 
 jobs:
   quality:
-    name: Lint · Typecheck · Build
+    name: Test · Prisma · Lint · Typecheck · Build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: servishub_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servishub_ci
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/servishub_ci
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
           version: 11.8.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Validate Prisma schema
-        run: pnpm exec prisma validate
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
-
-      - name: Generate Prisma Client
-        run: pnpm db:generate
-        env:
-          # generate does not need a live DB; placeholder satisfies prisma.config
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Build
+      - run: pnpm install --frozen-lockfile
+      - name: Validate and generate Prisma
+        run: pnpm exec prisma validate && pnpm db:generate
+      - name: Apply migrations in disposable PostgreSQL
+        run: pnpm exec prisma migrate deploy
+      - name: Apply Supabase role and RLS migrations in disposable PostgreSQL
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/bootstrap-supabase.sql
+          for sql in supabase/migrations/*.sql; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$sql"
+          done
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/rls-assertions.sql
+      - run: pnpm test:unit
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - name: Build production Next app
         run: pnpm build
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: public-anon-key-for-ci
+
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.8.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level high
