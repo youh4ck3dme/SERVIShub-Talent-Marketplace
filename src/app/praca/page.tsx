@@ -57,6 +57,7 @@ export default async function JobsPage({searchParams}:{searchParams:Promise<Quer
         <label className="text-xs text-zinc-400">Min. odmena (€)
           <input name="minSalary" type="number" min="0" defaultValue={f.minSalary||''} className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-3 text-white" /></label>
       </form>
+      {!process.env.DATABASE_URL && <p role="status" className="mt-6 rounded-xl border border-amber-400/40 bg-amber-400/10 px-5 py-4 text-sm text-amber-100">Katalóg sa pripravuje: testovacia databáza zatiaľ nie je pripojená. Ponuky a vyhľadávanie budú dostupné po aktivácii stagingu.</p>}
       <div className="my-7 flex items-center justify-between"><h2 className="font-semibold">{total} pracovných ponúk</h2><span className="text-sm text-zinc-500">Strana {page} / {Math.max(1,totalPages)}</span></div>
       <div className="space-y-3">{jobs.map(job=><article key={job.id} className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 transition hover:border-emerald-500">
         <Link href={'/praca/'+job.slug} className="block">

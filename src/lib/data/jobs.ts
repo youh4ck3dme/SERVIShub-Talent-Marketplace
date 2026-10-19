@@ -27,6 +27,8 @@ function activeJobWhere(filters: Omit<JobFilters,'page'>): Prisma.JobWhereInput 
 
 export async function findPublicJobs(filters: JobFilters) {
   const page = Math.max(1, Math.min(10000, filters.page));
+  // A database-free preview must not crash or pretend data exists.
+  if (!process.env.DATABASE_URL) return { jobs: [], total: 0, page, totalPages: 0 };
   const where = activeJobWhere(filters);
   const [jobs,total] = await prisma.$transaction([
     prisma.job.findMany({
@@ -40,6 +42,7 @@ export async function findPublicJobs(filters: JobFilters) {
 }
 
 export async function getPublicJobBySlug(slug: string) {
+  if (!process.env.DATABASE_URL) return null;
   return prisma.job.findFirst({
     where: { slug, ...activeJobWhere({}) },
     include: { company: { select:{ name:true,slug:true,logoUrl:true,website:true,location:true,description:true } } },
