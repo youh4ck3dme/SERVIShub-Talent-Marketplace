@@ -1,0 +1,1 @@
+ALTER TABLE "job_alerts" ADD COLUMN "processing_until" TIMESTAMP(3);

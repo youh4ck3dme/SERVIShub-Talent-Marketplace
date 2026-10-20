@@ -5,22 +5,14 @@ import { requireAdminProfile } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
-function isAuthConfigured() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-      process.env.DATABASE_URL,
-  );
-}
-
 export default async function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  if (isAuthConfigured()) {
-    await requireAdminProfile();
-  }
+  // Never skip role verification because of missing environment variables.
+  // A broken deployment must fail closed, not expose privileged UI.
+  await requireAdminProfile();
 
   return (
     <div className="flex min-h-full flex-col">

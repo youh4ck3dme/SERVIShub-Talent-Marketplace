@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { requireProviderProfile } from "@/lib/auth/session";
+import { LogoutButton } from "@/components/auth/logout-button";
 
 export const dynamic = "force-dynamic";
 
@@ -18,23 +19,13 @@ const PRO_NAV_PLACEHOLDERS = [
   "Predplatné",
 ] as const;
 
-function isAuthConfigured() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-      process.env.DATABASE_URL,
-  );
-}
-
 export default async function ProLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Skip role gate during CI/build when infra env is not fully wired.
-  if (isAuthConfigured()) {
-    await requireProviderProfile();
-  }
+  // Always enforce authorization for protected pages (fail closed).
+  await requireProviderProfile();
 
   return (
     <div className="flex min-h-full flex-col">
@@ -46,9 +37,7 @@ export default async function ProLayout({
             </Link>
             <Badge>Pro dashboard</Badge>
           </div>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/login">Účet</Link>
-          </Button>
+          <LogoutButton />
         </div>
       </header>
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8 md:flex-row">
