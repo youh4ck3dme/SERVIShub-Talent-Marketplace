@@ -45,11 +45,13 @@ export async function getCmsPost(slug:string):Promise<{post:CmsPost|null;availab
     return {post:null,available:false};
   }
 }
-/** Render user-editable CMS HTML as React-escaped text until an audited HTML sanitizer is installed. */
-export function htmlToPlainText(input:string|null|undefined):string {
-  return (input||'').replace(/<\/(p|li|h[1-6])\s*>|<br\s*\/?>/gi,'\n')
-    .replace(/<[^>]*>/g,'')
-    .replace(/&nbsp;/g,' ').replace(/&amp;/g,'&')
-    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"')
-    .replace(/\n{3,}/g,'\n\n').trim();
+/**
+ * Editorial content is untrusted. Return it verbatim and let React escape the
+ * text node; do not parse HTML with regexes or decode entities by hand.
+ *
+ * This intentionally renders WP markup literally until we adopt a vetted,
+ * explicit HTML-to-text parser. NEVER pass the result to dangerouslySetInnerHTML.
+ */
+export function htmlToPlainText(input: string | null | undefined): string {
+  return input ?? '';
 }
