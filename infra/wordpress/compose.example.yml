@@ -1,0 +1,32 @@
+# Example for self-managed editorial CMS; secrets from local .env, never committed.
+services:
+  database:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: "${WP_DB_PASSWORD}"
+      MARIADB_ROOT_PASSWORD: "${WP_DB_ROOT_PASSWORD}"
+    volumes:
+      - wordpress-db:/var/lib/mysql
+    networks: [internal]
+  cms:
+    image: wordpress:php8.3-apache
+    restart: unless-stopped
+    depends_on: [database]
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      WORDPRESS_DB_HOST: database:3306
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: "${WP_DB_PASSWORD}"
+    volumes:
+      - wordpress-files:/var/www/html
+    networks: [internal]
+volumes:
+  wordpress-db:
+  wordpress-files:
+networks:
+  internal:

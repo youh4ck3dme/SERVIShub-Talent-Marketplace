@@ -1,56 +1,46 @@
-import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
-  return (
-    <div className="flex min-h-full flex-col">
-      <SiteHeader />
-      <main className="mx-auto flex w-full max-w-md flex-1 items-center px-4 py-12">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>Registrácia</CardTitle>
-            <CardDescription>
-              Zákazník alebo profesionál — onboarding flow príde v MVP.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Meno a priezvisko</Label>
-              <Input id="fullName" placeholder="Ján Novák" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="vas@email.sk" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Heslo</Label>
-              <Input id="password" type="password" placeholder="••••••••" />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-3">
-            <Button className="w-full" disabled>
-              Vytvoriť účet (placeholder)
-            </Button>
-            <p className="text-sm text-muted-foreground">
-              Už máte účet?{" "}
-              <Link href="/login" className="text-primary underline-offset-4 hover:underline">
-                Prihlásenie
-              </Link>
-            </p>
-          </CardFooter>
-        </Card>
-      </main>
-    </div>
-  );
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [kind, setKind] = useState<'candidate' | 'employer'>('candidate');
+  const [message, setMessage] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [busy, setBusy] = useState(false);
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true); setMessage('');
+    try {
+      const { error } = await createClient().auth.signUp({
+        email, password,
+        options: { emailRedirectTo: window.location.origin + '/auth/callback', data: { full_name: fullName, account_type: kind } },
+      });
+      if (error) throw new Error(error.message);
+      setSuccess(true);
+      setMessage('Skontrolujte si e-mail. Potvrďte registráciu a následne sa prihláste.');
+    } catch (cause) { setMessage(cause instanceof Error ? cause.message : 'Registrácia zlyhala.'); }
+    finally { setBusy(false); }
+  }
+  return <main className="mx-auto w-full max-w-md flex-1 px-5 py-16">
+    <h1 className="text-3xl font-semibold tracking-tight">Vytvoriť účet</h1>
+    <p className="mt-2 text-sm text-muted-foreground">Jedno konto pre prácu aj freelance projekty.</p>
+    <form onSubmit={submit} className="mt-8 space-y-4">
+      <fieldset><legend className="mb-2 text-sm font-medium">Registrujem sa ako</legend>
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2"><input type="radio" name="kind" checked={kind === 'candidate'} onChange={() => setKind('candidate')}/> Kandidát</label>
+          <label className="flex items-center gap-2"><input type="radio" name="kind" checked={kind === 'employer'} onChange={() => setKind('employer')}/> Firma</label>
+        </div>
+      </fieldset>
+      <label className="block text-sm font-medium">Meno<input className="mt-1 w-full rounded-md border bg-background p-3" autoComplete="name" required minLength={2} maxLength={120} value={fullName} onChange={e => setFullName(e.target.value)} /></label>
+      <label className="block text-sm font-medium">E-mail<input className="mt-1 w-full rounded-md border bg-background p-3" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} /></label>
+      <label className="block text-sm font-medium">Heslo (aspoň 8 znakov)<input className="mt-1 w-full rounded-md border bg-background p-3" type="password" autoComplete="new-password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} /></label>
+      {message && <p role="status" className={success ? 'text-sm text-emerald-600' : 'text-sm text-destructive'}>{message}</p>}
+      <button disabled={busy || success} className="w-full rounded-md bg-primary p-3 font-medium text-primary-foreground disabled:opacity-50" type="submit">{busy ? 'Registrácia…' : 'Vytvoriť účet'}</button>
+    </form>
+    <p className="mt-6 text-sm text-muted-foreground">Už máte účet? <Link href="/login" className="font-semibold underline">Prihlásenie</Link></p>
+  </main>;
 }

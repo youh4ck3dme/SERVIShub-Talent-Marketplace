@@ -112,6 +112,10 @@ model Profile {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  candidateProfile    CandidateProfile?
+  companiesOwned      Company[] @relation("CompanyOwner")
+  companyMemberships  CompanyMember[]
+  jobAlerts           JobAlert[]
   provider            Provider?
   bookings            Booking[]      @relation("CustomerBookings")
   reviews             Review[]       @relation("CustomerReviews")
@@ -452,4 +456,185 @@ model Notification {
   @@index([userId, status])
   @@index([channel])
   @@map("notifications")
+}
+
+//// TALENT marketplace: add-only domain, existing service marketplace preserved
+
+enum CompanyVerification {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum CompanyMemberRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum JobStatus {
+  DRAFT
+  PUBLISHED
+  EXPIRED
+  CLOSED
+}
+
+enum JobEmployment {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+}
+
+enum JobRemote {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+enum SalaryPeriod {
+  HOUR
+  MONTH
+  YEAR
+  FIXED
+}
+
+enum ApplicationStatus {
+  APPLIED
+  REVIEWING
+  INTERVIEW
+  OFFER
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+enum JobAlertFrequency {
+  DAILY
+  WEEKLY
+}
+
+model CandidateProfile {
+  id           String   @id @default(cuid())
+  profileId    String   @unique @map("profile_id")
+  headline     String?
+  bio          String?
+  location     String?
+  githubUrl    String?  @map("github_url")
+  linkedinUrl  String?  @map("linkedin_url")
+  hourlyRate   Decimal? @map("hourly_rate") @db.Decimal(12, 2)
+  skills       String[] @default([])
+  isVisible    Boolean  @default(false) @map("is_visible")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  profile      Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+
+  @@map("candidate_profiles")
+}
+
+model Company {
+  id           String              @id @default(cuid())
+  ownerId      String              @map("owner_id")
+  name         String
+  slug         String              @unique
+  description  String?
+  website      String?
+  logoUrl      String?             @map("logo_url")
+  location     String?
+  verification CompanyVerification @default(PENDING)
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  owner        Profile         @relation("CompanyOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members      CompanyMember[]
+  jobs         Job[]
+
+  @@index([ownerId])
+  @@index([verification])
+  @@map("companies")
+}
+
+model CompanyMember {
+  id        String            @id @default(cuid())
+  companyId String            @map("company_id")
+  profileId String            @map("profile_id")
+  role      CompanyMemberRole @default(EDITOR)
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, profileId])
+  @@index([profileId])
+  @@map("company_members")
+}
+
+model Job {
+  id           String        @id @default(cuid())
+  companyId    String        @map("company_id")
+  slug         String        @unique
+  title        String
+  description  String        @db.Text
+  employment   JobEmployment
+  remote       JobRemote
+  location     String?
+  salaryMin    Decimal       @map("salary_min") @db.Decimal(12, 2)
+  salaryMax    Decimal       @map("salary_max") @db.Decimal(12, 2)
+  salaryPeriod SalaryPeriod  @default(MONTH) @map("salary_period")
+  currency     String        @default("EUR") @db.VarChar(3)
+  skills       String[]      @default([])
+  status       JobStatus     @default(DRAFT)
+  publishedAt  DateTime?     @map("published_at")
+  expiresAt    DateTime?     @map("expires_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  company      Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+
+  @@index([status, publishedAt])
+  @@index([companyId, status])
+  @@index([employment, remote])
+  @@index([expiresAt])
+  @@map("jobs")
+}
+
+model JobApplication {
+  id          String            @id @default(cuid())
+  jobId       String            @map("job_id")
+  candidateId String            @map("candidate_id")
+  coverLetter String?           @map("cover_letter") @db.Text
+  status      ApplicationStatus @default(APPLIED)
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  job       Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, candidateId])
+  @@index([candidateId, createdAt])
+  @@index([jobId, status])
+  @@map("job_applications")
+}
+
+model JobAlert {
+  id              String            @id @default(cuid())
+  profileId       String            @map("profile_id")
+  query           String?
+  location        String?
+  employment      JobEmployment?
+  remote          JobRemote?
+  frequency       JobAlertFrequency @default(DAILY)
+  isActive        Boolean           @default(true) @map("is_active")
+  lastDeliveredAt DateTime?         @map("last_delivered_at")
+  processingUntil   DateTime?         @map("processing_until")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, isActive])
+  @@map("job_alerts")
 }
